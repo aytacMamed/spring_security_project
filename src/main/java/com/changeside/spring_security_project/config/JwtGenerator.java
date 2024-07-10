@@ -6,10 +6,15 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtGenerator {
@@ -20,9 +25,14 @@ public class JwtGenerator {
         Date currentDate = new Date();
         Date expireDate = new Date(currentDate.getTime() + SecurityConstants.JWT_EXPIRATION);
 
+        String authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+
         String token = Jwts.
                 builder().
                 setSubject(username).
+                claim("roles", authorities).
                 setIssuedAt(new Date()).
                 setExpiration(expireDate).
                 signWith(key, SignatureAlgorithm.HS512).
@@ -33,10 +43,17 @@ public class JwtGenerator {
     }
 
     public String getUsernameFromJWT(String token) {
-
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         return claims.getSubject();
+    }
 
+    public List<GrantedAuthority> getAuthoritiesFromJWT(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        String roles = claims.get("roles", String.class);
+
+        return Arrays.stream(roles.split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     public boolean validateToken(String token) {
@@ -47,5 +64,4 @@ public class JwtGenerator {
             throw new AuthenticationCredentialsNotFoundException("Jwt token expired", ex.fillInStackTrace());
         }
     }
-
 }
