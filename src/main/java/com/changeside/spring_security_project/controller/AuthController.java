@@ -1,6 +1,7 @@
 package com.changeside.spring_security_project.controller;
 
 import com.changeside.spring_security_project.models.dto.request.LoginRequest;
+import com.changeside.spring_security_project.models.dto.request.RefreshTokenRequest;
 import com.changeside.spring_security_project.models.dto.request.RegisterRequest;
 import com.changeside.spring_security_project.models.dto.response.LoginResponse;
 import com.changeside.spring_security_project.models.dto.response.RegisterResponse;
@@ -25,5 +26,11 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest loginRequestDto) {
         return authService.login(loginRequestDto);
+    }
+
+
+    @PostMapping("/refresh")
+    public LoginResponse refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return authService.refreshToken(refreshTokenRequest);
     }
 }

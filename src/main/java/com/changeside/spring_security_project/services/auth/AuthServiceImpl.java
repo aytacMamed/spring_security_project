@@ -2,6 +2,7 @@ package com.changeside.spring_security_project.services.auth;
 
 import com.changeside.spring_security_project.config.JwtGenerator;
 import com.changeside.spring_security_project.models.dto.request.LoginRequest;
+import com.changeside.spring_security_project.models.dto.request.RefreshTokenRequest;
 import com.changeside.spring_security_project.models.dto.request.RegisterRequest;
 import com.changeside.spring_security_project.models.dto.response.LoginResponse;
 import com.changeside.spring_security_project.models.dto.response.RegisterResponse;
@@ -11,6 +12,7 @@ import com.changeside.spring_security_project.repository.RoleRepository;
 import com.changeside.spring_security_project.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -51,7 +53,21 @@ public class AuthServiceImpl implements AuthService {
                 loginRequest.getUsername(), loginRequest.getPassword()
         ));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtGenerator.generateToken(authentication);
-        return new LoginResponse(token);
+        String accessToken = jwtGenerator.generateToken(authentication);
+        String refreshToken = jwtGenerator.generateRefreshToken(authentication.getName());
+        return new LoginResponse(accessToken, refreshToken);
+    }
+
+    public LoginResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        String refreshToken = refreshTokenRequest.getRefreshToken();
+
+        if (jwtGenerator.validateRefreshToken(refreshToken)) {
+            String username = jwtGenerator.getUsernameFromJWT(refreshToken);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+            String newAccessToken = jwtGenerator.generateToken(authentication);
+            return new LoginResponse(newAccessToken, refreshToken);
+        } else {
+            throw new AuthenticationCredentialsNotFoundException("Invalid refresh token");
+        }
     }
 }

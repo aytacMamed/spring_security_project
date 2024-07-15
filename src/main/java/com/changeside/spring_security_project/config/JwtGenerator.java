@@ -29,17 +29,31 @@ public class JwtGenerator {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
-        String token = Jwts.
-                builder().
-                setSubject(username).
-                claim("roles", authorities).
-                setIssuedAt(new Date()).
-                setExpiration(expireDate).
-                signWith(key, SignatureAlgorithm.HS512).
-                compact();
+        String token = Jwts.builder()
+                .setSubject(username)
+                .claim("roles", authorities)
+                .setIssuedAt(new Date())
+                .setExpiration(expireDate)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
         System.out.println("New token: ");
         System.out.println(token);
         return token;
+    }
+
+    public String generateRefreshToken(String username) {
+        Date currentDate = new Date();
+        Date expireDate = new Date(currentDate.getTime() + SecurityConstants.JWT_REFRESH_EXPIRATION);
+
+        String refreshToken = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(expireDate)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+        System.out.println("New refresh token: ");
+        System.out.println(refreshToken);
+        return refreshToken;
     }
 
     public String getUsernameFromJWT(String token) {
@@ -62,6 +76,15 @@ public class JwtGenerator {
             return true;
         } catch (Exception ex) {
             throw new AuthenticationCredentialsNotFoundException("Jwt token expired", ex.fillInStackTrace());
+        }
+    }
+
+    public boolean validateRefreshToken(String refreshToken) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(refreshToken);
+            return true;
+        } catch (Exception ex) {
+            throw new AuthenticationCredentialsNotFoundException("Refresh token expired", ex.fillInStackTrace());
         }
     }
 }
